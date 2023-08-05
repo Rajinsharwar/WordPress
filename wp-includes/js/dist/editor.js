@@ -9791,7 +9791,7 @@ function FlatTermSelector({
       const errorMessage = (0, external_wp_i18n_namespaceObject.sprintf)(
         /* translators: %d: maximum term name length */
         (0, external_wp_i18n_namespaceObject.__)(
-          'The tag name should not exceed %d characters.'
+          'The term name should not exceed %d characters.'
         ),
         MAX_TAG_NAME_LENGTH
       );
@@ -10286,7 +10286,7 @@ function HierarchicalTermSelector({
       errorMessage = (0, external_wp_i18n_namespaceObject.sprintf)(
         /* translators: %d: maximum category name length */
         (0, external_wp_i18n_namespaceObject.__)(
-          'The category name should not exceed %d characters.'
+          'The term name should not exceed %d characters.'
         ),
         MAX_CATEGORY_NAME_LENGTH
       );
