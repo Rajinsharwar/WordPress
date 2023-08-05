@@ -9774,35 +9774,51 @@ function FlatTermSelector({
     });
   }
 
-  function onChange(termNames) {
+  async function onChange(termNames) {
+    const MAX_TAG_NAME_LENGTH = 200;
     const availableTerms = [...(terms !== null && terms !== void 0 ? terms : []), ...(searchResults !== null && searchResults !== void 0 ? searchResults : [])];
     const uniqueTerms = termNames.reduce((acc, name) => {
       if (!acc.some(n => n.toLowerCase() === name.toLowerCase())) {
         acc.push(name);
       }
-
       return acc;
     }, []);
-    const newTermNames = uniqueTerms.filter(termName => !availableTerms.find(term => isSameTermName(term.name, termName))); // Optimistically update term values.
+  
+    // Check the length of the term name and show an alert for invalid term names
+    const invalidTermNames = uniqueTerms.filter((termName) => termName.length > MAX_TAG_NAME_LENGTH);
+  
+    if (invalidTermNames.length > 0) {
+      const errorMessage = (0, external_wp_i18n_namespaceObject.sprintf)(
+        /* translators: %d: maximum term name length */
+        (0, external_wp_i18n_namespaceObject.__)(
+          'The tag name should not exceed %d characters.'
+        ),
+        MAX_TAG_NAME_LENGTH
+      );
+      alert(errorMessage);
+      return;
+    }
+  
+    // Optimistically update term values.
     // The selector will always re-fetch terms later.
-
     setValues(uniqueTerms);
-
-    if (newTermNames.length === 0) {
+  
+    if (uniqueTerms.length === 0) {
       return onUpdateTerms(termNamesToIds(uniqueTerms, availableTerms));
     }
-
+  
     if (!hasCreateAction) {
       return;
     }
-
-    Promise.all(newTermNames.map(termName => findOrCreateTerm({
-      name: termName
-    }))).then(newTerms => {
+  
+    try {
+      const newTerms = await Promise.all(uniqueTerms.map((termName) => findOrCreateTerm({ name: termName })));
       const newAvailableTerms = availableTerms.concat(newTerms);
       return onUpdateTerms(termNamesToIds(uniqueTerms, newAvailableTerms));
-    });
-  }
+    } catch (error) {
+      console.error('An error occurred while creating the term:', error);
+    }
+  }      
 
   function appendTerm(newTerm) {
     var _taxonomy$labels$sing;
@@ -10148,7 +10164,7 @@ function HierarchicalTermSelector({
   /**
    * @type {[number|'', Function]}
    */
-
+  const MAX_CATEGORY_NAME_LENGTH = 200;
   const [formParent, setFormParent] = (0,external_wp_element_namespaceObject.useState)('');
   const [showForm, setShowForm] = (0,external_wp_element_namespaceObject.useState)(false);
   const [filterValue, setFilterValue] = (0,external_wp_element_namespaceObject.useState)('');
@@ -10253,44 +10269,69 @@ function HierarchicalTermSelector({
     setShowForm(!showForm);
   };
 
-  const onAddTerm = async event => {
+  const onAddTerm = async (event) => {
     var _taxonomy$labels$sing;
-
+  
     event.preventDefault();
-
+  
+    // Reset the error message before processing the form
+    let errorMessage = '';
+  
     if (formName === '' || adding) {
       return;
-    } // Check if the term we are adding already exists.
-
-
+    }
+  
+    // Check the length of the category name
+    if (formName.length > MAX_CATEGORY_NAME_LENGTH) {
+      errorMessage = (0, external_wp_i18n_namespaceObject.sprintf)(
+        /* translators: %d: maximum category name length */
+        (0, external_wp_i18n_namespaceObject.__)(
+          'The category name should not exceed %d characters.'
+        ),
+        MAX_CATEGORY_NAME_LENGTH
+      );
+    }
+  
+    // If there is an error message, show the alert and return
+    if (errorMessage) {
+      alert(errorMessage);
+      return;
+    }
+  
     const existingTerm = findTerm(availableTerms, formParent, formName);
-
+  
     if (existingTerm) {
       // If the term we are adding exists but is not selected select it.
-      if (!terms.some(term => term === existingTerm.id)) {
+      if (!terms.some((term) => term === existingTerm.id)) {
         onUpdateTerms([...terms, existingTerm.id]);
       }
-
+  
       setFormName('');
       setFormParent('');
       return;
     }
-
+  
     setAdding(true);
     const newTerm = await addTerm({
       name: formName,
-      parent: formParent ? formParent : undefined
+      parent: formParent ? formParent : undefined,
     });
-    const defaultName = slug === 'category' ? (0,external_wp_i18n_namespaceObject.__)('Category') : (0,external_wp_i18n_namespaceObject.__)('Term');
-    const termAddedMessage = (0,external_wp_i18n_namespaceObject.sprintf)(
-    /* translators: %s: taxonomy name */
-    (0,external_wp_i18n_namespaceObject._x)('%s added', 'term'), (_taxonomy$labels$sing = taxonomy?.labels?.singular_name) !== null && _taxonomy$labels$sing !== void 0 ? _taxonomy$labels$sing : defaultName);
-    (0,external_wp_a11y_namespaceObject.speak)(termAddedMessage, 'assertive');
+    const defaultName = slug === 'category' ? (0, external_wp_i18n_namespaceObject.__)('Category') : (0, external_wp_i18n_namespaceObject.__)('Term');
+    const termAddedMessage = (0, external_wp_i18n_namespaceObject.sprintf)(
+      /* translators: %s: taxonomy name */
+      (0, external_wp_i18n_namespaceObject._x)('%s added', 'term'),
+      (_taxonomy$labels$sing = taxonomy?.labels?.singular_name) !== null &&
+        _taxonomy$labels$sing !== void 0
+        ? _taxonomy$labels$sing
+        : defaultName
+    );
+    (0, external_wp_a11y_namespaceObject.speak)(termAddedMessage, 'assertive');
     setAdding(false);
     setFormName('');
     setFormParent('');
     onUpdateTerms([...terms, newTerm.id]);
   };
+
 
   const setFilter = value => {
     const newFilteredTermsTree = availableTermsTree.map(getFilterMatcher(value)).filter(term => term);
